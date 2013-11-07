@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CrimeScore Map API Example</title>
+
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script>
+    // **********************************************************************************
+    // Get the latest version of this code at https://github.com/YourMapper/CrimeScoreAPI
+
+    // Build your own server-side call to the Mashape CrimeScore API
+    // Docs at https://www.mashape.com/yourmapper/crimescore
+    // Github example repo at https://github.com/YourMapper/APIUsage
+    var CrimeScoreURL = "";
+
+    // YourMapper Dataset ID of the crime data you want to return.
+    // If omitted it will automatically detect the dataset, but it's slightly slower.
+    // Use the id query string parameter from www.yourmapper.com/browse or get it from  
+    //     the YourMapper API at https://github.com/YourMapper/APIUsage
+    var YourMapperDatasetID = 174; // 174 is Louisville, KY
+
+    // setup any starting location you'd like
+    var startlat = 38.1858635;
+    var startlon = -85.676193;
+    
+    // **********************************************************************************
+
+    var lat, lon;
+    function initialize() {
+        // Create any map styles you want. See Google Maps API docs.
+        var YourMapperStyles = [
+        {
+            featureType: "road",
+            elementType: "labels",
+            stylers: [
+            { saturation: -70 },
+            { lightness: 40 }
+            ]
+        },{
+            featureType: "road",
+            elementType: "geometry",
+            stylers: [
+            { saturation: -88 },
+            { lightness: 40 },
+            { gamma: 0.65 },
+            { visibility: "simplified" }
+            ]
+        },{
+            featureType: "all",
+            elementType: "all",
+            stylers: [
+            { lightness: -2 }
+            ]
+        }
+        ];
+        var YMMapType = new google.maps.StyledMapType(YourMapperStyles , { name: "Map"} );
+
+        var position = new google.maps.LatLng(startlat, startlon);
+        var mapOptions = {
+            zoom: 11,
+            center: position,
+            mapTypeControlOptions: {  
+                mapTypeIds: [google.maps.MapTypeId.ROADMAP, 'YMStyle']
+            }
+        };
+        var map = new google.maps.Map(document.getElementById('scoremap'),mapOptions);
+        map.mapTypes.set('YMStyle', YMMapType);
+        map.setMapTypeId('YMStyle');
+
+        // this is just to draw a bounding box, but you don't need it.
+        var boundingBoxCoordinates = [
+        new google.maps.LatLng(38.378269, -85.947418),
+        new google.maps.LatLng(38.378269, -85.404968),
+        new google.maps.LatLng(37.993458, -85.404968),
+        new google.maps.LatLng(37.993458, -85.947418),
+        new google.maps.LatLng(38.378269, -85.947418)
+        ];
+        var boundingBox = new google.maps.Polyline({
+            path: boundingBoxCoordinates,
+            strokeColor: '#0266cd',
+            strokeOpacity: 1.0,
+            strokeWeight: 2
+        });
+        boundingBox.setMap(map);
+        // end bounding box if you want to delete it
+
+        // use any png image path you want on your server
+        var marker = new google.maps.Marker({
+            position: position,
+            icon: "http://static.yourmapper.com/marker/round22.png",
+            map: map
+        });
+        marker.setPosition(position);
+        getCrimeScore(position.lat(),position.lng());
+
+        google.maps.event.addListener(map, 'click', function(e) {
+            marker.setPosition(e.latLng);
+            map.panTo(e.latLng);
+            getCrimeScore(e.latLng.lat(),e.latLng.lng());
+        });
+    }
+
+    function getCrimeScore(lat,lon) {
+        //console.log("Getting Score at lat: "+lat);
+
+        // set Widget loading
+        $('#CrimeScore-loading').html('Loading...');
+        $('#CrimeScore-score').html('-');
+        $('#CrimeScore-density').html('-');
+        $('#CrimeScore-grade').html('N/A');
+        $("#CrimeScore-grade").attr("style", "color: #000000");
+        //$('div.CrimeScore-link'.href).html('');
+
+        var data;
+        var xmlRequest = $.ajax({
+            url: CrimeScoreURL+"?lat="+lat+"&lon="+lon+"&f=json&id="+YourMapperDatasetID,
+            success: function(response) {
+                //console.log( response );
+                var obj = $.parseJSON(response);
+                $('#CrimeScore-loading').html('&nbsp;');
+                $('#CrimeScore-score').html(obj.score);
+                $('#CrimeScore-grade').html(obj.grade);
+                $("#CrimeScore-grade").attr("style", "color: #"+obj.color);
+                $('#CrimeScore-density').html(obj.density);
+                $("#CrimeScore-link").attr("href", "http://www.yourmapper.com/map/174/crime-reports/daily-updates-from-lmpd-for-last-2-years.htm?lat="+lat+"&lon="+lon);
+                if (obj.message != 'OK') {
+                    $('#CrimeScore-loading').html(obj.message);
+                } 
+            }
+        });
+        
+        if (CrimeScoreURL == '') {
+            alert('A CrimeScore URL though Mashape on your server is required to use the CrimeScore API. See the page source code for more details.');
+        }
+    }
+
+    google.maps.event.addDomListener(window, 'load', initialize);
+
+    </script>
+    <style>
+    body { -webkit-text-size-adjust: 100%; }
+    h1 {
+        color: #1B59C0;
+        margin-top: 10px;
+        font-size: 32px;
+        letter-spacing:1px;
+        font-family: 'Arial', sans-serif;
+        font-weight:300;
+    }
+    .bannertext {
+        margin-top: 210px;
+        font-family: 'Arial', sans-serif;
+        font-weight: 300;
+        font-size:18px;
+        letter-spacing:1px;
+        word-spacing: 2px;
+        color: #555;
+        line-height: 30px;
+        margin-bottom: 20px;
+    }
+    .mapanything {
+        min-width:800px; max-width:800px; width: 800px;
+        text-align: left;
+        padding: 0px;
+        margin: 0;
+        margin-right: auto;
+        margin-left: auto;
+        padding: 0;
+        margin-top: 400px;
+    }
+    </style>
+</head>
+<body  style="margin: 0px; padding: 0px;background-color:#ffffff;">
+    <div align="center" style="clear:both; ">
+        <div style="width: 100%" align="center"> 
+            <div class="mapanything" style="margin-top: 0; padding-bottom: 30px;">
+                <div style="text-align:center; padding-left: 0px; clear: both; font-family: Arial;">
+                    <h1 style="margin-top: 0; padding-top: 30px; margin-bottom: 20px;">CrimeScore Map API Example</h1>
+                    <div style=" padding-left:10px; margin: 0;" class="bannertext">Click on the map to see the CrimeScore rating at that location.</div>
+                    <table cellpadding="10"><tr><td valign="top">
+                            <div id="scoremap" style="width: 450px; height: 450px; border: 1px solid black;"></div>
+                        </td><td valign="top" style="text-align: center; padding-top:30px">
+                        <div id="CrimeScore-box" style="text-align:center;  width: 300px; height: 300px; background-color: white; font-size: 18px; padding-top:10px; border-radius: 29px; -moz-border-radius: 29px; -webkit-border-radius: 29px; border: 3px solid #0266cd; margin-top:10px; font-family: Verdana;" >
+                            <div id="" style="font-size: 30px;"><img src="images/CrimeScoreLogo200.png" width="200" height="76" /></div>
+                            <div id="CrimeScore-loading" style="color: #ebb81f; font-size: 16px;">Loading...</div>
+                            <div id="CrimeScore-score" style="color: #0266cd; font-size: 80px;">-</div>
+                            <div id="" style="font-size:20px;">Grade: <strong><span id="CrimeScore-grade">N/A</span></strong></div>
+                            <div>Area crimes: <b><span id="CrimeScore-density">0</span></b></div><br>
+                            <div style="font-size:14px;"><a id="CrimeScore-link" href="/map/174/crime-reports/daily-updates-from-lmpd-for-last-2-years.htm?lat=38.252861&lon=-85.758858" target="mappage">View Crime Details on a Map</a></div>
+                        </div>
+                    </td></tr></table>
+                    <a href="https://github.com/YourMapper/CrimeScoreAPI">Github Repo</a> &middot; <a href="http://www.yourmapper.com/crimescore">CrimeScore Info</a> &middot; <a href="http://www.yourmapper.com/browse/Crime/Location/All/map.htm">Coverage Cities</a> &middot; <a href="https://www.mashape.com/yourmapper/crimescore">CrimeScore API Access</a><br><br>YourMapper is a &reg; registered trademark, and <br>CrimeScore text, logo, and badges are &copy; copyright<br>2005-2013 Metro Mapper LLC, dba YourMapper
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
